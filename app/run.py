@@ -8,7 +8,7 @@ from nltk.tokenize import word_tokenize
 from flask import Flask
 from flask import render_template, request, jsonify
 from plotly.graph_objs import Bar
-from sklearn.externals import joblib
+import joblib
 from sqlalchemy import create_engine
 
 
@@ -27,7 +27,7 @@ def tokenize(text):
 
 # load data
 engine = create_engine('sqlite:///../data/DisasterResponse.db')
-df = pd.read_sql_table('MessagesCategories', engine)
+df = pd.read_sql_table('Message', engine)
 
 # load model
 model = joblib.load("../models/model.pkl")
@@ -42,10 +42,13 @@ def index():
     # TODO: Below is an example - modify to extract data for your own visuals
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
+    column_names = df.iloc[:,4:].columns
+    column_bool = (df.iloc[:,4:] != 0).sum().values
     
     # create visuals
     # TODO: Below is an example - modify to create your own visuals
     graphs = [
+            # GRAPH 1 - genre graph
         {
             'data': [
                 Bar(
@@ -63,15 +66,29 @@ def index():
                     'title': "Genre"
                 }
             }
+        },  
+        {
+    'data': [
+        {
+            'labels': column_names,
+            'values': column_bool,
+            'type': 'pie',
+            'hole': 0.4,  # Adjust the hole size for a donut chart effect
         }
+    ],
+
+    'layout': {
+        'title': 'Distribution of Message Categories (Pie Chart)',
+    }
+}
     ]
-    
     # encode plotly graphs in JSON
     ids = ["graph-{}".format(i) for i, _ in enumerate(graphs)]
     graphJSON = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
     
     # render web page with plotly graphs
     return render_template('master.html', ids=ids, graphJSON=graphJSON)
+
 
 
 # web page that handles user query and displays model results
